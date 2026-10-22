@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ev-perception-for-preemption"
+type: software
+version: 0.1.0
+license: MIT
+authors:
+  - alias: "soheylfalahzade"
+repository-code: "https://github.com/soheylfalahzade/ev-perception-for-preemption"
+keywords:
+  - intelligent transportation systems
+  - emergency vehicle preemption
+  - map matching
