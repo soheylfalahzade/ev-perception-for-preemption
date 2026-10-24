@@ -72,15 +72,14 @@ def run_scenarios(n: int, seed0: int, cfg: SynthConfig | None = None):
                 if row.true_edge is not None and m is not None:
                     n_match += 1
                     hmm_ok += m.edge_id == row.true_edge
-                    xy = pipe.matcher.graph.polylines  # noqa: F841 (kept for clarity)
                     nn_ok += graph.nearest_edge(pipe._motion[o.track_id].position) == row.true_edge
                 h = pipe.last_heading.get(o.track_id)
                 if h is not None and row.speed_mps >= 3.0:
                     head_err.append(abs((h - row.heading_rad + math.pi) % (2 * math.pi) - math.pi))
-        for m in metas:
-            d = per[m.track_id]
+        for meta in metas:
+            d = per[meta.track_id]
             if d["t"]:
-                logs.append(TrackLog(m.is_ev, np.array(d["t"]), np.array(d["c"]), d["f"],
+                logs.append(TrackLog(meta.is_ev, np.array(d["t"]), np.array(d["c"]), d["f"],
                                      np.array(d["d"]), 0.0))
         profiler_frames += pipe.profiler.samples["frame_total"]
         for st in ("motion", "flash", "fusion", "map_match"):
@@ -146,6 +145,17 @@ def evaluate_models(logs, models, thresholds, n_confirm: int = 5) -> dict:
     return out
 
 
+def wilson_ci(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion ``k / n``."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return max(0.0, c - h), min(1.0, c + h)
+
+
 def pick_threshold(rows: list[dict], max_far: float) -> float:
     """Smallest threshold whose development false-alarm rate does not exceed ``max_far``."""
     ok = [r["thr"] for r in rows if r["false_alarm_rate"] <= max_far]
@@ -180,7 +190,11 @@ def main(argv: list[str] | None = None) -> int:
     table = {}
     for m in MODELS:
         r = min(curves[m], key=lambda x: abs(x["thr"] - chosen[m]))
-        table[m] = {**r, "auc": auc(test_logs, models, m)}
+        n_ev = sum(lg.is_ev for lg in test_logs)
+        n_non = len(test_logs) - n_ev
+        table[m] = {**r, "auc": auc(test_logs, models, m),
+                    "detection_ci95": wilson_ci(round(r["detection_rate"] * n_ev), n_ev),
+                    "false_alarm_ci95": wilson_ci(round(r["false_alarm_rate"] * n_non), n_non)}
     lat = {"frame_total_ms": {p: float(np.percentile(np.array(frame_t) * 1e3, q))
                               for p, q in (("p50", 50), ("p95", 95), ("p99", 99))},
            "stages_p95_ms": {k: float(np.percentile(np.array(v) * 1e3, 95))

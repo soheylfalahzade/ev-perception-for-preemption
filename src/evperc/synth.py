@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -113,19 +114,21 @@ def generate_scenario(
                            (not is_ev) and rng.random() < cfg.confuser_prob)
         metas.append(meta)
         route = _route(graph, rng)
-        pts, ranges, arc = [], [], 0.0
+        pts_l: list[Any] = []
+        ranges: list[tuple[float, float, str]] = []
+        arc = 0.0
         for e in route:
             pl = graph.polylines[e]
-            if pts:
-                arc += float(np.linalg.norm(pl[0] - pts[-1]))
+            if pts_l:
+                arc += float(np.linalg.norm(pl[0] - pts_l[-1]))
             start = arc
             for v in pl:
-                if pts:
-                    arc += float(np.linalg.norm(v - pts[-1])) if v is not pl[0] else 0.0
-                pts.append(v)
+                if pts_l:
+                    arc += float(np.linalg.norm(v - pts_l[-1])) if v is not pl[0] else 0.0
+                pts_l.append(v)
             ranges.append((start, start + graph.length(e), e))
             arc = ranges[-1][1]
-        pts = np.array(pts)
+        pts = np.array(pts_l)
         seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
         cum = np.concatenate([[0.0], np.cumsum(seg)])
         speed = rng.uniform(14, 20) if is_ev else rng.uniform(8, 14)

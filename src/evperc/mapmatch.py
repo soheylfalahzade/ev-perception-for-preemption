@@ -44,8 +44,9 @@ class RoadGraph:
             lane = e.find("lane")
             if lane is None:
                 continue
-            pts = [[float(v) for v in p.split(",")] for p in lane.get("shape").split()]
-            edges[e.get("id")] = pts
+            shape = lane.get("shape") or ""
+            pts = [[float(v) for v in p.split(",")] for p in shape.split()]
+            edges[str(e.get("id"))] = pts
         succ: dict[str, list[str]] = {k: [] for k in edges}
         for c in root.iter("connection"):
             f, t = c.get("from"), c.get("to")
@@ -146,6 +147,6 @@ class MapMatcher:
         m = max(scored.values())
         z = m + math.log(sum(math.exp(v - m) for v in scored.values()))
         self._state[track_id] = {e: v - z for e, v in scored.items()}
-        best = max(scored, key=scored.get)
+        best = max(scored, key=lambda k: scored[k])
         d, s = info[best]
         return MatchResult(best, math.exp(scored[best] - z), s, d, self.graph.length(best))

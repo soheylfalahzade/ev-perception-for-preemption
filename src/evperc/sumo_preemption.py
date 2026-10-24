@@ -13,6 +13,7 @@ import json
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -43,7 +44,7 @@ def run_one(args: tuple[str, int, Condition, float]) -> dict:
     t_ev = float(rng.uniform(150.0, 330.0))
     t_false = list(np.cumsum(rng.exponential(3600.0 / cond.false_events_per_h, 200))
                    ) if cond.false_events_per_h > 0 else []
-    result = {"seed": seed, "condition": cond.name, "ev_time_s": float("nan"),
+    result: dict[str, Any] = {"seed": seed, "condition": cond.name, "ev_time_s": float("nan"),
               "forced_green_s": 0.0, "false_events": 0, "false_during_red": 0}
     inserted, t_in, scheduled, fire_at = False, None, False, None
     preempt_start, false_until = None, None

@@ -14,7 +14,8 @@ def logit(p: float, eps: float = 1e-3) -> float:
 def features(class_score: float, flash_score: float | None) -> np.ndarray:
     """Feature vector ``[logit(class), logit(flash) or 0, flash_available, 1]``."""
     has = flash_score is not None
-    return np.array([logit(class_score), logit(flash_score) if has else 0.0, float(has), 1.0])
+    lf = logit(flash_score) if flash_score is not None else 0.0
+    return np.array([logit(class_score), lf, float(has), 1.0])
 
 
 @dataclass
