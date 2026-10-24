@@ -8,6 +8,17 @@ it moves, *how confident* the system is, and it needs this with low latency and 
 preemptions. This package is the layer that produces exactly that from the output of any
 detector + tracker (e.g. YOLO + ByteTrack). No detector is trained here.
 
+[![ci](https://github.com/soheylfalahzade/ev-perception-for-preemption/actions/workflows/ci.yml/badge.svg)](https://github.com/soheylfalahzade/ev-perception-for-preemption/actions)
+![python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
+![typing](https://img.shields.io/badge/mypy-checked-blue)
+
+<p align="center"><img src="docs/assets/pipeline.svg" alt="pipeline animation" width="100%"></p>
+
+<p align="center"><img src="docs/assets/scenario.gif" alt="emulated scenario: track posteriors and the emitted event" width="90%"></p>
+
+<sub>Animation: one emulated scenario processed by the pipeline. Left: observed track positions coloured by the smoothed emergency posterior; red ring = ground-truth emergency vehicle (display only). Right: posterior per track against the confirmation threshold; stars mark emitted events on the matched edge. The gray track that approaches the threshold is a *confuser*. Regenerate with `evperc-gif`.</sub>
+
 ```mermaid
 flowchart LR
     A[Detector + tracker] --> B[Ground-plane position<br/>class score, light feature]
@@ -96,20 +107,23 @@ consecutive frames.
 
 ## Results (emulated perception)
 
-| cues | detection rate | false alarms per ordinary track | median distance to edge end at alarm | track AUC |
+| cues | detection rate [95% CI] | false alarms per ordinary track [95% CI] | median distance to edge end at alarm | track AUC |
 |---|---|---|---|---|
-| detector only | 0.68 | 0.0133 | 91.6 m | 0.989 |
-| flashing light only | 0.65 | 0.0017 | 57.8 m | 0.919 |
-| **fused** | **0.77** | **0.0017** | 67.4 m | **0.995** |
+| detector only | 0.68 [0.58, 0.76] | 0.0133 [0.0068, 0.0261] | 91.6 m | 0.989 |
+| flashing light only | 0.65 [0.55, 0.74] | 0.0017 [0.0003, 0.0094] | 57.8 m | 0.919 |
+| **fused** | **0.77** [0.68, 0.84] | **0.0017** [0.0003, 0.0094] | 67.4 m | **0.995** |
+
+Intervals are Wilson 95% intervals on 100 emergency and 600 ordinary tracks
+([`docs/results/intervals.json`](docs/results/intervals.json)).
 
 ![operating curves](docs/results/operating_curves.png)
 
-- Fusing both cues detects more emergency vehicles than either cue alone at a lower false-alarm
-  rate than the detector alone (0.0017 vs 0.0133 at the same development-set target).
+- Point estimates favour the fused model on both axes, but the intervals overlap (detection
+  0.77 vs 0.68; false alarms 0.0017 vs 0.0133): with 100 emergency tracks this study does not
+  establish a significant difference. The track-level AUC (0.995 vs 0.989) points the same way.
 - The flashing-light cue needs about 1.5 s of history, so fused alarms come later (67 m median
   lead) than detector-only alarms (92 m). The price of fewer false alarms is lead distance.
-- The false-alarm rates are estimated from 600 ordinary tracks (1 false alarm at 0.0017); treat them
-  as indicative.
+- False-alarm rates rest on 1 (fused) and 8 (detector only) false alarms among 600 ordinary tracks.
 
 **Map matching and heading** (439k frame-level comparisons, frames on junction connectors excluded):
 
@@ -150,6 +164,16 @@ waves is not tested here. Perception enters this study only through four paramet
 reported as events and forced-green seconds only, since the example network has no cross traffic to
 measure their cost.
 
+## Claims and evidence
+
+| claim | evidence | file |
+|---|---|---|
+| HMM map matching with heading beats nearest-edge matching | 0.974 vs 0.900 edge accuracy, 439k frame comparisons | `docs/results/results.json` |
+| the pipeline is fast enough for per-frame use | p95 1.9 ms per frame on one core (excludes detection and tracking) | `docs/results/results.json` |
+| fusing cues is at least as good as either cue alone | point estimates favour fusion; intervals overlap | `docs/results/intervals.json` |
+| preemption shortens emergency-vehicle passage in the studied scenario | 34.4 s to about 20 s, paired, 12 seeds, CI excludes zero | `docs/results/sumo_summary.json` |
+| earlier detection yields more benefit | **not supported**: effect is flat from 30 to 150 m in this scenario | `docs/results/sumo_summary.json` |
+
 ## Limitations and scope
 
 - Perception is **emulated**. No real footage, no real sirens, no camera images are processed in the
@@ -161,6 +185,25 @@ measure their cost.
 - Camera handover is idealised (track IDs persist across cameras).
 - The closed-loop study uses one approach and one signal; false-preemption cost is a proxy.
 - A CARLA integration is not included.
+
+## Threats to validity
+
+- *Construct*: perception outputs are emulated from stated distributions; real detectors, sirens
+  and cameras may violate them (correlated misses, rolling-shutter aliasing, glare).
+- *Internal*: operating thresholds and fusion weights are fitted on development seeds and applied
+  to disjoint test seeds; hazard-light confusers are the only modelled hard negatives.
+- *External*: one grid topology, one signal program and one approach in the closed-loop study.
+- *Statistical*: 100 emergency tracks give wide intervals; closed-loop intervals use 12 seeds.
+
+## Data and code availability
+
+All code, configuration, seeds and result files used for the figures and tables are in this
+repository. No external datasets are used. See [`docs/METHODS.md`](docs/METHODS.md) for the formal
+definitions and [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) for exact commands.
+
+## Citation
+
+See [`CITATION.cff`](CITATION.cff).
 
 ## Roadmap
 
