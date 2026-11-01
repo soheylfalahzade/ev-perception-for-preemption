@@ -1,5 +1,9 @@
 # ev-perception-for-preemption
 
+<!-- banner -->
+<p align="center"><img src="docs/assets/banner.svg" alt="ev-perception-for-preemption" width="860"></p>
+
+
 **From camera tracks to a preemption-ready event: flashing-light cue, map matching, heading and an explicit event contract for emergency-vehicle signal preemption.**
 
 A signal controller cannot use "an ambulance bounding box". It needs to know *which road-graph
