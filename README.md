@@ -168,6 +168,17 @@ waves is not tested here. Perception enters this study only through four paramet
 reported as events and forced-green seconds only, since the example network has no cross traffic to
 measure their cost.
 
+### Demand sweep
+
+The closed-loop study can be repeated at several traffic levels to test whether the effect of detection
+range depends on how long the queue is:
+
+```bash
+evperc-sumo --demand-scale 0.5 1 1.5 2 --seeds 12 --jobs 4 --out results/sumo_demand
+```
+
+Each level writes its own `summary.json` and `runs.csv`; `by_demand.json` collects all levels.
+
 ## Claims and evidence
 
 | claim | evidence | file |

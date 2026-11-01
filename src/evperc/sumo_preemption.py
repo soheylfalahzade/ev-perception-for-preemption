@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import shutil
+import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -123,6 +126,21 @@ def summarise(rows: list[dict]) -> dict:
     return out
 
 
+def scaled_sumocfg(sumocfg: str, scale: float, workdir: str | Path) -> str:
+    """Copy the scenario to ``workdir`` with every ``vehsPerHour`` multiplied by ``scale``."""
+    src = Path(sumocfg).parent
+    dst = Path(workdir)
+    for f in src.iterdir():
+        if f.is_file():
+            shutil.copy(f, dst / f.name)
+    for rou in dst.glob("*.rou.xml"):
+        txt = rou.read_text(encoding="utf-8")
+        txt = re.sub(r'vehsPerHour="([0-9.]+)"',
+                     lambda m: f'vehsPerHour="{float(m.group(1)) * scale:g}"', txt)
+        rou.write_text(txt, encoding="utf-8")
+    return str(dst / Path(sumocfg).name)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point (``evperc-sumo``)."""
     ap = argparse.ArgumentParser(description=__doc__)
@@ -135,20 +153,34 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--false-per-h", type=float, default=6.0)
     ap.add_argument("--max-t", type=float, default=420.0)
     ap.add_argument("--out", default="results/sumo")
+    ap.add_argument("--demand-scale", type=float, nargs="+", default=[1.0],
+                    help="multipliers of the scenario demand (e.g. 0.5 1 1.5 2); one study each")
     args = ap.parse_args(argv)
     conds = default_conditions(args.latency, args.miss, args.false_per_h)
-    jobs = [(args.sumocfg, args.seed0 + s, c, args.max_t) for s in range(args.seeds) for c in conds]
-    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        rows = list(pool.map(run_one, jobs))
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    summary = summarise(rows)
-    summary["conditions_spec"] = [asdict(c) for c in conds]
-    (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     import pandas as pd
 
-    pd.DataFrame(rows).to_csv(out / "runs.csv", index=False)
-    print(json.dumps(summary["conditions"], indent=2))
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    by_demand: dict[str, dict] = {}
+    for scale in args.demand_scale:
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = args.sumocfg if scale == 1.0 else scaled_sumocfg(args.sumocfg, scale, tmp)
+            jobs = [(cfg, args.seed0 + s, c, args.max_t)
+                    for s in range(args.seeds) for c in conds]
+            with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+                rows = list(pool.map(run_one, jobs))
+        sub = out if len(args.demand_scale) == 1 else out / f"demand_x{scale:g}"
+        sub.mkdir(parents=True, exist_ok=True)
+        summary = summarise(rows)
+        summary["conditions_spec"] = [asdict(c) for c in conds]
+        summary["demand_scale"] = scale
+        (sub / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        pd.DataFrame(rows).to_csv(sub / "runs.csv", index=False)
+        by_demand[f"x{scale:g}"] = summary["conditions"]
+        print(f"demand x{scale:g}")
+        print(json.dumps(summary["conditions"], indent=2))
+    if len(args.demand_scale) > 1:
+        (out / "by_demand.json").write_text(json.dumps(by_demand, indent=2), encoding="utf-8")
     return 0
 
 
