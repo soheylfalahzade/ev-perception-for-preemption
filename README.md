@@ -179,6 +179,23 @@ evperc-sumo --demand-scale 0.5 1 1.5 2 --seeds 12 --jobs 4 --out results/sumo_de
 
 Each level writes its own `summary.json` and `runs.csv`; `by_demand.json` collects all levels.
 
+Results (12 seeds per level, same approach and controller; delay of the emergency vehicle in seconds, change
+against no preemption with a 95% interval; `docs/results/sumo_demand.json`):
+
+| demand | no preemption | preempt from 30 m | 60 m | 90 m | 120 m | 150 m |
+|---|---|---|---|---|---|---|
+| x0.5 | 29.9 s | -10.5 [-17.5, -4.1] | -11.0 [-17.9, -4.2] | -11.5 [-18.8, -4.5] | -11.6 [-18.8, -4.8] | -11.9 [-18.7, -5.1] |
+| x1 (study above) | 34.4 s | -12.8 [-20.4, -5.6] | -14.1 [-21.7, -6.9] | -14.3 [-22.0, -7.0] | -14.5 [-22.3, -7.0] | -15.1 [-22.4, -8.0] |
+| x1.5 | 42.6 s | -14.2 [-21.2, -7.2] | -15.5 [-22.5, -8.4] | -16.7 [-24.0, -9.1] | -17.2 [-24.5, -9.6] | -17.8 [-24.8, -10.5] |
+| x2 | 87.3 s | -12.5 [-21.8, -3.1] | -20.0 [-26.6, -11.5] | -22.0 [-28.6, -12.9] | -28.2 [-33.4, -22.4] | -33.5 [-40.0, -27.4] |
+
+Preemption helps at every level. At demand x0.5 to x1.5 the benefit grows only slightly with detection range
+and the intervals overlap, as in the single-level study. At x2, where the queue is long and the delay without
+preemption jumps to 87 s, detection range matters: the benefit rises from 12.5 s at 30 m to 33.5 s at 150 m,
+and the intervals of 30 m and 150 m no longer overlap. The conclusion that earlier detection does not pay
+therefore holds for moderate queues only. The intervals are against the no-preemption baseline, not between
+ranges, and the demand sweep uses one approach and one controller.
+
 ## Claims and evidence
 
 | claim | evidence | file |
@@ -187,7 +204,7 @@ Each level writes its own `summary.json` and `runs.csv`; `by_demand.json` collec
 | the pipeline is fast enough for per-frame use | p95 1.9 ms per frame on one core (excludes detection and tracking) | `docs/results/results.json` |
 | fusing cues is at least as good as either cue alone | point estimates favour fusion; intervals overlap | `docs/results/intervals.json` |
 | preemption shortens emergency-vehicle passage in the studied scenario | 34.4 s to about 20 s, paired, 12 seeds, CI excludes zero | `docs/results/sumo_summary.json` |
-| earlier detection yields more benefit | **not supported**: effect is flat from 30 to 150 m in this scenario | `docs/results/sumo_summary.json` |
+| earlier detection yields more benefit | **partially supported**: flat from 30 to 150 m at demand x0.5 to x1.5; at x2 the benefit grows from 12.5 s to 33.5 s with non-overlapping intervals | `docs/results/sumo_demand.json` |
 
 ## Limitations and scope
 
