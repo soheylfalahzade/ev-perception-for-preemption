@@ -170,6 +170,12 @@ measure their cost.
 
 ### Demand sweep
 
+<p align="center"><img src="docs/assets/sumo_preemption.gif" alt="Same traffic seed in SUMO without and with preemption" width="820"></p>
+
+*One traffic seed (demand x1.5) replayed twice in SUMO: without preemption the emergency vehicle waits 47.9 s in the
+queue; with preemption from 90 m the signal is forced green on detection and it passes in 18.0 s. Vehicles are coloured
+by speed (red: stopped). Regenerate with `evperc-sumo-gif`.*
+
 The closed-loop study can be repeated at several traffic levels to test whether the effect of detection
 range depends on how long the queue is:
 
@@ -188,6 +194,11 @@ against no preemption with a 95% interval; `docs/results/sumo_demand.json`):
 | x1 (study above) | 34.4 s | -12.8 [-20.4, -5.6] | -14.1 [-21.7, -6.9] | -14.3 [-22.0, -7.0] | -14.5 [-22.3, -7.0] | -15.1 [-22.4, -8.0] |
 | x1.5 | 42.6 s | -14.2 [-21.2, -7.2] | -15.5 [-22.5, -8.4] | -16.7 [-24.0, -9.1] | -17.2 [-24.5, -9.6] | -17.8 [-24.8, -10.5] |
 | x2 | 87.3 s | -12.5 [-21.8, -3.1] | -20.0 [-26.6, -11.5] | -22.0 [-28.6, -12.9] | -28.2 [-33.4, -22.4] | -33.5 [-40.0, -27.4] |
+
+<p align="center"><img src="docs/assets/demand_sweep.png" alt="Benefit of earlier detection by demand level" width="820"></p>
+
+*Left: delay saved against detection range for four demand levels (bands: 95% intervals against no preemption).
+Right: delay without preemption. Regenerate with `evperc-figures`.*
 
 Preemption helps at every level. At demand x0.5 to x1.5 the benefit grows only slightly with detection range
 and the intervals overlap, as in the single-level study. At x2, where the queue is long and the delay without

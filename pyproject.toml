@@ -21,6 +21,8 @@ dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.4", "mypy>=1.8"]
 [project.scripts]
 evperc-eval = "evperc.evaluate:main"
 evperc-sumo = "evperc.sumo_preemption:main"
+evperc-sumo-gif = "evperc.render_sumo:main"
+evperc-figures = "evperc.figures:main"
 evperc-gif = "evperc.viz:main"
 
 [tool.setuptools.packages.find]

@@ -36,6 +36,14 @@ class Condition:
 
 def run_one(args: tuple[str, int, Condition, float]) -> dict:
     """Simulate one (seed, condition) pair and return the EV passage time and cost proxies."""
+    return simulate(args)
+
+
+def simulate(args: tuple[str, int, Condition, float], trace: list | None = None) -> dict:
+    """Like :func:`run_one`; when ``trace`` is a list, every step appends a snapshot for rendering.
+
+    A snapshot is ``(t, ev_xy | None, [(x, y, speed), ...], light_state, preempting)``.
+    """
     import traci
 
     sumocfg, seed, cond, max_t = args
@@ -61,6 +69,13 @@ def run_one(args: tuple[str, int, Condition, float]) -> dict:
             if inserted and t_in is None and "ev" in conn.simulation.getDepartedIDList():
                 t_in = t
             road = conn.vehicle.getRoadID("ev") if "ev" in conn.vehicle.getIDList() else None
+            if trace is not None:
+                ids = conn.vehicle.getIDList()
+                trace.append((t, conn.vehicle.getPosition("ev") if "ev" in ids else None,
+                              [(*conn.vehicle.getPosition(v), conn.vehicle.getSpeed(v))
+                               for v in ids if v != "ev"],
+                              conn.trafficlight.getRedYellowGreenState(TL_ID),
+                              preempt_start is not None))
             if road == EXIT_EDGE and t_in is not None:
                 result["ev_time_s"] = t - t_in
                 break
